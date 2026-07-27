@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dropshipper Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:#f4f7fb; display:flex; min-height:100vh; }
+        .sidebar { width:230px; background:white; padding:30px 20px; box-shadow:2px 0 10px rgba(0,0,0,0.04); position:fixed; top:0; left:0; height:100%; overflow-y:auto; }
+        .sidebar h2 { font-size:20px; color:#1a202c; margin-bottom:30px; font-weight:700; }
+        .sidebar h2 i { color:#4f46e5; margin-right:8px; }
+        .menu-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:8px; color:#4a5568; cursor:pointer; transition:all 0.2s; margin-bottom:4px; font-weight:500; }
+        .menu-item:hover { background:#f1f5f9; color:#1a202c; }
+        .menu-item.active { background:#eef2ff; color:#4f46e5; font-weight:600; }
+        .menu-item i { width:20px; text-align:center; font-size:16px; }
+        .logout-btn { margin-top:40px; border-top:1px solid #e2e8f0; padding-top:20px; color:#e53e3e; }
+        .logout-btn:hover { background:#fff5f5; color:#c53030; }
+        .main-content { margin-left:230px; flex:1; padding:30px 35px; }
+        .page { display:none; animation:fade 0.25s ease; }
+        .page.active-page { display:block; }
+        @keyframes fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .page-title { font-size:26px; font-weight:700; color:#1a202c; margin-bottom:20px; }
+        .product-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:24px; }
+        .product-card { background:white; border-radius:12px; padding:16px 16px 20px; box-shadow:0 4px 10px rgba(0,0,0,0.04); transition:transform 0.15s; text-align:center; }
+        .product-card:hover { transform:translateY(-4px); }
+        .product-card img { width:100%; height:160px; object-fit:cover; border-radius:8px; background:#e2e8f0; }
+        .product-card h3 { font-size:16px; font-weight:600; color:#1a202c; margin:12px 0 4px; }
+        .product-card .price { font-size:18px; font-weight:700; color:#4f46e5; }
+        .product-card .view-btn { margin-top:12px; background:#4f46e5; color:white; border:none; padding:8px 20px; border-radius:30px; font-size:14px; cursor:pointer; transition:background 0.2s; }
+        .product-card .view-btn:hover { background:#4338ca; }
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); justify-content:center; align-items:center; z-index:999; }
+        .modal-overlay.show { display:flex; }
+        .modal-box { background:white; max-width:640px; width:90%; padding:30px; border-radius:16px; max-height:90vh; overflow-y:auto; position:relative; }
+        .modal-close { position:absolute; top:16px; right:20px; font-size:26px; cursor:pointer; color:#718096; background:none; border:none; }
+        .modal-close:hover { color:#1a202c; }
+        .modal-box img { width:100%; max-height:280px; object-fit:cover; border-radius:10px; background:#e2e8f0; }
+        .detail-row { display:flex; align-items:flex-start; gap:8px; padding:8px 0; border-bottom:1px solid #f1f5f9; }
+        .detail-row .label { font-weight:600; color:#475569; min-width:130px; font-size:14px; flex-shrink:0; padding-top:2px; }
+        .detail-row .value { flex:1; color:#1a202c; font-size:15px; word-break:break-word; }
+        .detail-row .value.description { font-size:14px; color:#4a5568; }
+        .copy-mini { background:none; border:none; color:#94a3b8; cursor:pointer; padding:4px 6px; border-radius:6px; transition:all 0.2s; font-size:14px; flex-shrink:0; margin-top:2px; }
+        .copy-mini:hover { background:#eef2ff; color:#4f46e5; }
+        .copy-mini.copied { color:#22c55e; }
+        .detail-row.special-note { background:#fef9e7; padding:12px; border-radius:8px; border-left:4px solid #f59e0b; margin-top:6px; }
+        .form-group { margin-bottom:16px; }
+        .form-group label { display:block; font-weight:600; font-size:14px; color:#2d3748; margin-bottom:4px; }
+        .form-group input { width:100%; padding:12px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:15px; outline:none; transition:0.2s; }
+        .form-group input:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,0.1); }
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .submit-btn { background:#4f46e5; color:white; font-weight:600; padding:14px; border:none; border-radius:8px; font-size:16px; cursor:pointer; width:100%; transition:0.2s; }
+        .submit-btn:hover { background:#4338ca; }
+        .order-number-display { background:#f1f5f9; padding:12px; border-radius:8px; font-size:18px; font-weight:600; color:#1a202c; margin-bottom:16px; }
+        .table-wrap { overflow-x:auto; background:white; border-radius:12px; padding:4px 4px 0 4px; box-shadow:0 4px 10px rgba(0,0,0,0.03); }
+        table { width:100%; border-collapse:collapse; font-size:14px; }
+        th { background:#f8fafc; text-align:left; padding:14px 12px; font-weight:600; color:#475569; white-space:nowrap; }
+        td { padding:14px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        .status-badge { display:inline-block; padding:4px 14px; border-radius:50px; font-size:12px; font-weight:600; }
+        .status-processing { background:#fef3c7; color:#92400e; }
+        .status-delivered { background:#dbeafe; color:#1e40af; }
+        .status-completed { background:#d1fae5; color:#065f46; }
+        .status-cancelled { background:#f1f5f9; color:#64748b; }
+        .status-rejected { background:#fee2e2; color:#991b1b; }
+        .table-actions button { background:none; border:none; cursor:pointer; padding:4px 8px; font-size:14px; }
+        .btn-edit { color:#4f46e5; }
+        .btn-delete { color:#e53e3e; }
+        .note-2h { font-size:13px; color:#e53e3e; background:#fff5f5; padding:8px 12px; border-radius:8px; margin-top:12px; display:inline-block; }
+        .bank-form { background:white; padding:24px; border-radius:12px; margin-bottom:28px; box-shadow:0 4px 10px rgba(0,0,0,0.03); }
+        .payment-history h3 { font-size:18px; margin-bottom:12px; }
+        .stock-badge { display:inline-block; padding:4px 14px; border-radius:50px; font-size:12px; font-weight:600; background:#d1fae5; color:#065f46; }
+        @media (max-width:700px) { .sidebar { width:70px; padding:20px 10px; } .sidebar h2 span,.menu-item span { display:none; } .sidebar h2 i { margin-right:0; } .menu-item { justify-content:center; } .main-content { margin-left:70px; padding:20px 16px; } .form-row { grid-template-columns:1fr; } .detail-row { flex-wrap:wrap; } .detail-row .label { min-width:100%; } }
+    </style>
+</head>
+<body>
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar">
+        <h2><i class="fas fa-box"></i><span> Hub</span></h2>
+        <div class="menu-item active" data-page="products"><i class="fas fa-th-large"></i> <span>Products</span></div>
+        <div class="menu-item" data-page="add-order"><i class="fas fa-plus-circle"></i> <span>Add Order</span></div>
+        <div class="menu-item" data-page="orders"><i class="fas fa-list-ul"></i> <span>Show Orders</span></div>
+        <div class="menu-item" data-page="payments"><i class="fas fa-credit-card"></i> <span>Payments</span></div>
+        <div class="menu-item logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></div>
+    </aside>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="main-content">
+
+        <!-- PRODUCTS -->
+        <section id="page-products" class="page active-page">
+            <h2 class="page-title">📦 All Products</h2>
+            <div class="product-grid" id="productGrid"></div>
+        </section>
+
+        <!-- ADD ORDER -->
+        <section id="page-add-order" class="page">
+            <h2 class="page-title">➕ Add New Order</h2>
+            <div class="order-number-display">Order #: <span id="autoOrderNumber">20001</span></div>
+            <form id="addOrderForm">
+                <div class="form-group"><label>Customer Name *</label><input type="text" id="custName" required /></div>
+                <div class="form-group"><label>Address *</label><input type="text" id="custAddress" required /></div>
+                <div class="form-group"><label>Postal Code *</label><input type="text" id="custPostal" required /></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Phone 1 *</label><input type="text" id="custPhone1" required /></div>
+                    <div class="form-group"><label>Phone 2 (opt)</label><input type="text" id="custPhone2" /></div>
+                </div>
+                <button type="submit" class="submit-btn">Submit Order</button>
+            </form>
+            <p style="margin-top:10px;color:#718096;font-size:14px;"><i class="fas fa-info-circle"></i> Order number auto‑assigned.</p>
+        </section>
+
+        <!-- SHOW ORDERS -->
+        <section id="page-orders" class="page">
+            <h2 class="page-title">📋 My Orders</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Order #</th><th>Customer</th><th>Address</th><th>Phone 1</th><th>Phone 2</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+                    <tbody id="ordersTableBody"></tbody>
+                </table>
+            </div>
+            <div class="note-2h"><i class="fas fa-clock"></i> Edit/Delete only within 2 hours.</div>
+        </section>
+
+        <!-- PAYMENTS -->
+        <section id="page-payments" class="page">
+            <h2 class="page-title">💳 Payments</h2>
+            <div class="bank-form">
+                <h3 style="margin-bottom:14px;">Your Bank Details</h3>
+                <form id="bankForm">
+                    <div class="form-row">
+                        <div class="form-group"><label>Bank Name *</label><input type="text" id="bankName" required /></div>
+                        <div class="form-group"><label>Branch *</label><input type="text" id="bankBranch" required /></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Account Holder *</label><input type="text" id="accountHolder" required /></div>
+                        <div class="form-group"><label>Account Number *</label><input type="text" id="accountNumber" required /></div>
+                    </div>
+                    <button type="submit" class="submit-btn">Save Bank Details</button>
+                </form>
+            </div>
+            <div class="payment-history">
+                <h3>📊 Payment History</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Date</th><th>Account Number</th><th>Amount (LKR)</th></tr></thead>
+                        <tbody id="paymentHistoryBody"></tbody>
+                    </table>
+                </div>
+                <p style="margin-top:12px;color:#718096;font-size:14px;">Payments sent every 2 weeks.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========== PRODUCT MODAL ========== -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <img id="modalImage" src="" />
+            <div class="detail-row"><span class="label">📌 Title</span><span class="value" id="modalTitleDisplay"></span><button class="copy-mini" onclick="copyElementText('modalTitleDisplay')"><i class="fas fa-copy"></i></button></div>
+            <div class="detail-row"><span class="label">📝 Description</span><span class="value description" id="modalDescDisplay"></span><button class="copy-mini" onclick="copyElementText('modalDescDisplay')"><i class="fas fa-copy"></i></button></div>
+            <div class="detail-row"><span class="label">💰 Price (LKR)</span><span class="value" id="modalPriceDisplay"></span><button class="copy-mini" onclick="copyElementText('modalPriceDisplay')"><i class="fas fa-copy"></i></button></div>
+            <div class="detail-row"><span class="label">📦 Delivery Time</span><span class="value" id="modalTimeDisplay"></span><button class="copy-mini" onclick="copyElementText('modalTimeDisplay')"><i class="fas fa-copy"></i></button></div>
+            <div class="detail-row"><span class="label">🚚 Delivery Charge</span><span class="value" id="modalChargeDisplay"></span><button class="copy-mini" onclick="copyElementText('modalChargeDisplay')"><i class="fas fa-copy"></i></button></div>
+            <div class="detail-row special-note"><span class="label">📌 Special Note</span><span class="value" id="modalNoteDisplay"></span><button class="copy-mini" onclick="copyElementText('modalNoteDisplay')"><i class="fas fa-copy"></i></button></div>
+            <div style="margin-top:18px;"><button class="action-btn download" onclick="downloadImage()" style="background:#e2e8f0;border:none;padding:10px 18px;border-radius:30px;font-weight:600;cursor:pointer;"><i class="fas fa-download"></i> Download Image</button></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURATION - CHANGE THIS TO YOUR BACKEND URL
+        // ============================================================
+        const API_BASE_URL = 'https://dropship-backend-pswl.onrender.com'; // <-- YOUR BACKEND URL
+
+        // ============================================================
+        // GLOBALS
+        // ============================================================
+        let currentProduct = null;
+        let currentUser = null;
+        let dropshipperToken = null;
+        let allOrders = [];
+
+        // ============================================================
+        // CHECK LOGIN
+        // ============================================================
+        function checkLogin() {
+            const token = localStorage.getItem('dropshipperToken');
+            const user = localStorage.getItem('dropshipperUser');
+            if (!token || !user) {
+                window.location.href = 'dropshipper-login.html';
+                return false;
+            }
+            dropshipperToken = token;
+            currentUser = JSON.parse(user);
+            return true;
+        }
+
+        // ============================================================
+        // API HELPER
+        // ============================================================
+        async function apiCall(method, endpoint, body = null) {
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${dropshipperToken}`
+                }
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'API call failed');
+            }
+            return await response.json();
+        }
+
+        // ============================================================
+        // RENDER PRODUCTS (ONLY AVAILABLE ONES)
+        // ============================================================
+        async function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '<p style="text-align:center;color:#718096;">Loading products...</p>';
+
+            try {
+                const products = await apiCall('GET', '/api/products');
+                grid.innerHTML = '';
+                if (products.length === 0) {
+                    grid.innerHTML = '<p style="text-align:center;color:#718096;">No products available right now. Please check back later.</p>';
+                    return;
+                }
+                products.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.innerHTML = `
+                        <img src="${p.image || 'https://placehold.co/400x300/e2e8f0/1a202c?text=Product'}" alt="${p.title}" />
+                        <h3>${p.title}</h3>
+                        <div class="price">Rs. ${p.price.toFixed(2)}</div>
+                        <span class="stock-badge">✅ Available</span>
+                        <button class="view-btn" onclick="openModal(${p.id})">View</button>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                grid.innerHTML = `<p style="text-align:center;color:#e53e3e;">Error loading products: ${error.message}</p>`;
+            }
+        }
+
+        // ============================================================
+        // PRODUCT MODAL
+        // ============================================================
+        let productsCache = [];
+
+        async function openModal(id) {
+            try {
+                const products = await apiCall('GET', '/api/products');
+                const p = products.find(prod => prod.id === id);
+                if (!p) return;
+                currentProduct = p;
+
+                document.getElementById('modalImage').src = p.image || 'https://placehold.co/400x300/e2e8f0/1a202c?text=Product';
+                document.getElementById('modalTitleDisplay').textContent = p.title;
+                document.getElementById('modalDescDisplay').textContent = p.description;
+                document.getElementById('modalPriceDisplay').textContent = `Rs. ${p.price.toFixed(2)}`;
+                document.getElementById('modalTimeDisplay').textContent = `${p.deliveryMinDays} – ${p.deliveryMaxDays} days`;
+                document.getElementById('modalChargeDisplay').textContent = `Rs. ${p.deliveryCharge.toFixed(2)}`;
+                document.getElementById('modalNoteDisplay').textContent = p.note || 'No special note.';
+                document.getElementById('productModal').classList.add('show');
+            } catch (error) {
+                alert('Error loading product: ' + error.message);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').classList.remove('show');
+        }
+        document.getElementById('productModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+        function copyElementText(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const text = el.textContent.trim();
+            if (!text) { alert('Nothing to copy.'); return; }
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = el.parentElement.querySelector('.copy-mini');
+                if (btn) { btn.classList.add('copied');
+                    btn.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => { btn.classList.remove('copied');
+                        btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 1500); }
+                alert('✅ Copied: "' + text.substring(0, 40) + (text.length > 40 ? '...' : '') + '"');
+            }).catch(() => alert('⚠️ Copy failed.'));
+        }
+
+        function downloadImage() {
+            if (!currentProduct) return;
+            alert(`📥 Downloading image for "${currentProduct.title}" ... (simulated)`);
+        }
+
+        // ============================================================
+        // RENDER ORDERS
+        // ============================================================
+        async function renderOrders() {
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Loading...</td></tr>';
+
+            try {
+                const orders = await apiCall('GET', '/api/orders');
+                allOrders = orders;
+                tbody.innerHTML = '';
+                if (orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;">No orders yet.</td></tr>';
+                    return;
+                }
+                orders.forEach(o => {
+                    const created = new Date(o.createdAt);
+                    const now = new Date();
+                    const diffHours = (now - created) / (1000 * 60 * 60);
+                    const canEdit = diffHours <= 2;
+
+                    const statusClass = 'status-' + o.status.toLowerCase();
+                    const statusDisplay = o.status.charAt(0).toUpperCase() + o.status.slice(1).toLowerCase();
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>#${o.orderNumber}</strong></td>
+                        <td>${o.customerName}</td>
+                        <td style="max-width:160px;word-break:break-word;">${o.address}</td>
+                        <td>${o.phone1}</td>
+                        <td>${o.phone2 || '-'}</td>
+                        <td><span class="status-badge ${statusClass}">${statusDisplay}</span></td>
+                        <td>${created.toLocaleDateString()}</td>
+                        <td class="table-actions">
+                            ${canEdit ? `
+                                <button class="btn-edit" onclick="editOrder(${o.id})"><i class="fas fa-pen"></i></button>
+                                <button class="btn-delete" onclick="deleteOrder(${o.id})"><i class="fas fa-trash"></i></button>
+                            ` : `<span style="color:#a0aec0;font-size:12px;"><i class="fas fa-lock"></i> Locked</span>`}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#e53e3e;">Error: ${error.message}</td></tr>`;
+            }
+        }
+
+        // ============================================================
+        // EDIT ORDER
+        // ============================================================
+        async function editOrder(id) {
+            const order = allOrders.find(o => o.id === id);
+            if (!order) return;
+
+            const newName = prompt('Customer Name:', order.customerName);
+            if (newName === null) return;
+            const newAddr = prompt('Address:', order.address);
+            if (newAddr === null) return;
+            const newPostal = prompt('Postal Code:', order.postalCode);
+            if (newPostal === null) return;
+            const newP1 = prompt('Phone 1:', order.phone1);
+            if (newP1 === null) return;
+            const newP2 = prompt('Phone 2 (optional):', order.phone2 || '');
+            if (newP2 === null) return;
+
+            try {
+                await apiCall('PUT', `/api/orders/${id}`, {
+                    customerName: newName.trim(),
+                    address: newAddr.trim(),
+                    postalCode: newPostal.trim(),
+                    phone1: newP1.trim(),
+                    phone2: newP2.trim()
+                });
+                alert('✅ Order updated!');
+                renderOrders();
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // ============================================================
+        // DELETE ORDER
+        // ============================================================
+        async function deleteOrder(id) {
+            if (!confirm('Delete this order?')) return;
+            try {
+                await apiCall('DELETE', `/api/orders/${id}`);
+                alert('🗑️ Order deleted.');
+                renderOrders();
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // ============================================================
+        // ADD ORDER
+        // ============================================================
+        document.getElementById('addOrderForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('custName').value.trim();
+            const address = document.getElementById('custAddress').value.trim();
+            const postal = document.getElementById('custPostal').value.trim();
+            const phone1 = document.getElementById('custPhone1').value.trim();
+            const phone2 = document.getElementById('custPhone2').value.trim();
+
+            if (!name || !address || !postal || !phone1) {
+                alert('Please fill in all required fields (*)');
+                return;
+            }
+
+            try {
+                const newOrder = await apiCall('POST', '/api/orders', {
+                    customerName: name,
+                    address,
+                    postalCode: postal,
+                    phone1,
+                    phone2
+                });
+                alert(`✅ Order #${newOrder.orderNumber} added!`);
+                renderOrders();
+                // Update the order number display
+                const orders = await apiCall('GET', '/api/orders');
+                const maxOrder = orders.reduce((max, o) => Math.max(max, o.orderNumber), 20000);
+                document.getElementById('autoOrderNumber').textContent = maxOrder + 1;
+                this.reset();
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        });
+
+        // ============================================================
+        // PAYMENTS (Placeholder - Backend not fully built yet)
+        // ============================================================
+        function renderPayments() {
+            document.getElementById('paymentHistoryBody').innerHTML = `
+                <tr><td colspan="3" style="text-align:center;color:#718096;">Payment history will appear here once the admin adds payments.</td></tr>
+            `;
+        }
+
+        document.getElementById('bankForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('✅ Bank details saved! (Coming soon: real backend integration)');
+        });
+
+        // ============================================================
+        // NAVIGATION
+        // ============================================================
+        const menuItems = document.querySelectorAll('.menu-item[data-page]');
+        const pages = {
+            products: document.getElementById('page-products'),
+            'add-order': document.getElementById('page-add-order'),
+            orders: document.getElementById('page-orders'),
+            payments: document.getElementById('page-payments')
+        };
+        menuItems.forEach(item => {
+            item.addEventListener('click', function() {
+                menuItems.forEach(m => m.classList.remove('active'));
+                this.classList.add('active');
+                Object.values(pages).forEach(p => p.classList.remove('active-page'));
+                const pageId = this.getAttribute('data-page');
+                if (pages[pageId]) pages[pageId].classList.add('active-page');
+            });
+        });
+
+        // ============================================================
+        // LOGOUT
+        // ============================================================
+        function logout() {
+            if (confirm('Logout?')) {
+                localStorage.removeItem('dropshipperToken');
+                localStorage.removeItem('dropshipperUser');
+                window.location.href = 'dropshipper-login.html';
+            }
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        async function init() {
+            if (!checkLogin()) return;
+            await renderProducts();
+            await renderOrders();
+            renderPayments();
+            // Set auto order number
+            try {
+                const orders = await apiCall('GET', '/api/orders');
+                const maxOrder = orders.reduce((max, o) => Math.max(max, o.orderNumber), 20000);
+                document.getElementById('autoOrderNumber').textContent = maxOrder + 1;
+            } catch (e) {
+                console.error('Error getting order number:', e);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

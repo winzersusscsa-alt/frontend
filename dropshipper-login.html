@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dropshipper Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:#f4f7fb; min-height:100vh; display:flex; justify-content:center; align-items:center; }
+        .login-box { background:white; padding:40px; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.08); width:100%; max-width:400px; }
+        h1 { font-size:24px; margin-bottom:8px; }
+        .subtitle { color:#718096; margin-bottom:24px; }
+        .form-group { margin-bottom:16px; }
+        .form-group label { display:block; font-weight:600; font-size:14px; color:#2d3748; margin-bottom:4px; }
+        .form-group input { width:100%; padding:12px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:15px; outline:none; }
+        .form-group input:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,0.1); }
+        .submit-btn { background:#4f46e5; color:white; font-weight:600; padding:14px; border:none; border-radius:8px; font-size:16px; cursor:pointer; width:100%; }
+        .submit-btn:hover { background:#4338ca; }
+        .error { color:#e53e3e; font-size:14px; margin-top:8px; display:none; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>📦 Dropshipper Login</h1>
+        <p class="subtitle">Login to access your dashboard</p>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" required />
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" required />
+            </div>
+            <div id="errorMsg" class="error"></div>
+            <button type="submit" class="submit-btn">Login</button>
+        </form>
+        <p style="margin-top:16px;font-size:13px;color:#718096;text-align:center;">
+            New user? <a href="#" onclick="alert('Please contact admin via WhatsApp to get your account.')">Request access</a>
+        </p>
+    </div>
+
+    <script>
+        // ⭐ CHANGE THIS TO YOUR BACKEND URL
+        const API_BASE_URL = 'https://dropship-backend-pswl.onrender.com';
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+
+            errorMsg.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Login failed');
+                }
+
+                if (data.user.role !== 'DROPSHIPPER') {
+                    throw new Error('This account is not a dropshipper account.');
+                }
+
+                // Save token and redirect
+                localStorage.setItem('dropshipperToken', data.token);
+                localStorage.setItem('dropshipperUser', JSON.stringify(data.user));
+                window.location.href = 'dashboard-live.html';
+
+            } catch (error) {
+                errorMsg.textContent = '❌ ' + error.message;
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        /* ===== STYLES (same as before) ===== */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:#f4f7fb; display:flex; min-height:100vh; }
+        .sidebar { width:230px; background:white; padding:30px 20px; box-shadow:2px 0 10px rgba(0,0,0,0.04); position:fixed; top:0; left:0; height:100%; overflow-y:auto; }
+        .sidebar h2 { font-size:20px; color:#1a202c; margin-bottom:30px; font-weight:700; }
+        .sidebar h2 i { color:#4f46e5; margin-right:8px; }
+        .menu-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:8px; color:#4a5568; cursor:pointer; transition:all 0.2s; margin-bottom:4px; font-weight:500; }
+        .menu-item:hover { background:#f1f5f9; color:#1a202c; }
+        .menu-item.active { background:#eef2ff; color:#4f46e5; font-weight:600; }
+        .menu-item i { width:20px; text-align:center; font-size:16px; }
+        .logout-btn { margin-top:40px; border-top:1px solid #e2e8f0; padding-top:20px; color:#e53e3e; }
+        .logout-btn:hover { background:#fff5f5; color:#c53030; }
+        .main-content { margin-left:230px; flex:1; padding:30px 35px; }
+        .page { display:none; animation:fade 0.25s ease; }
+        .page.active-page { display:block; }
+        @keyframes fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .page-title { font-size:26px; font-weight:700; color:#1a202c; margin-bottom:20px; }
+        .form-group { margin-bottom:16px; }
+        .form-group label { display:block; font-weight:600; font-size:14px; color:#2d3748; margin-bottom:4px; }
+        .form-group input, .form-group textarea, .form-group select { width:100%; padding:12px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:15px; outline:none; transition:0.2s; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,0.1); }
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .submit-btn { background:#4f46e5; color:white; font-weight:600; padding:14px; border:none; border-radius:8px; font-size:16px; cursor:pointer; width:100%; transition:0.2s; }
+        .submit-btn:hover { background:#4338ca; }
+        .card-white { background:white; padding:24px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.03); margin-bottom:24px; }
+        .table-wrap { overflow-x:auto; background:white; border-radius:12px; padding:4px 4px 0 4px; box-shadow:0 4px 10px rgba(0,0,0,0.03); }
+        table { width:100%; border-collapse:collapse; font-size:14px; }
+        th { background:#f8fafc; text-align:left; padding:14px 12px; font-weight:600; color:#475569; white-space:nowrap; }
+        td { padding:14px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        .status-badge { display:inline-block; padding:4px 14px; border-radius:50px; font-size:12px; font-weight:600; }
+        .status-processing { background:#fef3c7; color:#92400e; }
+        .status-delivered { background:#dbeafe; color:#1e40af; }
+        .status-completed { background:#d1fae5; color:#065f46; }
+        .status-cancelled { background:#f1f5f9; color:#64748b; }
+        .status-rejected { background:#fee2e2; color:#991b1b; }
+        .status-available { background:#d1fae5; color:#065f46; }
+        .status-hidden { background:#fee2e2; color:#991b1b; }
+        .table-actions button { background:none; border:none; cursor:pointer; padding:4px 8px; font-size:14px; }
+        .btn-edit { color:#4f46e5; }
+        .btn-whatsapp { color:#25D366; }
+        .btn-delete { color:#e53e3e; }
+        .btn-toggle { color:#f59e0b; }
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); justify-content:center; align-items:center; z-index:999; }
+        .modal-overlay.show { display:flex; }
+        .modal-box { background:white; max-width:520px; width:90%; padding:30px; border-radius:16px; max-height:90vh; overflow-y:auto; position:relative; }
+        .modal-close { position:absolute; top:16px; right:20px; font-size:26px; cursor:pointer; color:#718096; background:none; border:none; }
+        .modal-close:hover { color:#1a202c; }
+        .img-preview { margin-top:10px; max-width:200px; max-height:150px; border-radius:8px; border:1px solid #e2e8f0; display:none; }
+        .upload-status { font-size:13px; margin-top:6px; color:#4f46e5; }
+        .stock-available { color:#22c55e; font-weight:600; }
+        .stock-hidden { color:#e53e3e; font-weight:600; }
+        @media (max-width:700px) { .sidebar { width:70px; padding:20px 10px; } .sidebar h2 span,.menu-item span { display:none; } .sidebar h2 i { margin-right:0; } .menu-item { justify-content:center; } .main-content { margin-left:70px; padding:20px 16px; } .form-row { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar">
+        <h2><i class="fas fa-user-shield"></i><span> Admin</span></h2>
+        <div class="menu-item active" data-page="add-user"><i class="fas fa-user-plus"></i> <span>Add User</span></div>
+        <div class="menu-item" data-page="add-product"><i class="fas fa-plus-circle"></i> <span>Add Product</span></div>
+        <div class="menu-item" data-page="all-orders"><i class="fas fa-list-ul"></i> <span>All Orders</span></div>
+        <div class="menu-item" data-page="payments"><i class="fas fa-credit-card"></i> <span>Payments</span></div>
+        <div class="menu-item" data-page="others"><i class="fas fa-ellipsis-h"></i> <span>Others</span></div>
+        <div class="menu-item logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></div>
+    </aside>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="main-content">
+
+        <!-- ===== ADD USER ===== -->
+        <section id="page-add-user" class="page active-page">
+            <h2 class="page-title">👤 Add Dropshipper User</h2>
+            <div class="card-white">
+                <form id="addUserForm">
+                    <div class="form-group"><label>Username *</label><input type="text" id="userUsername" required /></div>
+                    <div class="form-group"><label>Password *</label><input type="text" id="userPassword" required /></div>
+                    <div class="form-group"><label>Phone Number (with country code) *</label><input type="text" id="userPhone" placeholder="e.g. 94771234567" required /></div>
+                    <button type="submit" class="submit-btn"><i class="fas fa-plus"></i> Create User & Send WhatsApp</button>
+                </form>
+                <p style="margin-top:12px;color:#718096;font-size:14px;"><i class="fas fa-info-circle"></i> Credentials will be sent via WhatsApp (simulated).</p>
+            </div>
+            <div class="card-white">
+                <h3 style="margin-bottom:12px;">All Dropshippers</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>ID</th><th>Username</th><th>Phone</th></tr></thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== ADD PRODUCT ===== -->
+        <section id="page-add-product" class="page">
+            <h2 class="page-title">📦 Add New Product (LKR)</h2>
+            <div class="card-white">
+                <form id="addProductForm">
+                    <div class="form-group"><label>Title *</label><input type="text" id="prodTitle" required /></div>
+                    <div class="form-group"><label>Description *</label><textarea id="prodDesc" rows="3" required></textarea></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Price (LKR) *</label><input type="number" step="0.01" id="prodPrice" required /></div>
+                        <div class="form-group"><label>Delivery Charge (LKR) *</label><input type="number" step="0.01" id="prodDeliveryCharge" required /></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Deliver in (min days) *</label><input type="number" id="prodMin" required /></div>
+                        <div class="form-group"><label>Deliver in (max days) *</label><input type="number" id="prodMax" required /></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Product Image *</label>
+                        <input type="file" id="prodImageFile" accept="image/*" />
+                        <div id="imageUploadStatus" class="upload-status"></div>
+                        <img id="imagePreview" class="img-preview" />
+                        <input type="hidden" id="prodImageUrl" />
+                        <p style="font-size:12px;color:#718096;margin-top:4px;">
+                            <i class="fas fa-cloud-upload-alt"></i> Uploads to Cloudinary (free).
+                        </p>
+                    </div>
+
+                    <div class="form-group"><label>Special Note (optional)</label><input type="text" id="prodNote" /></div>
+                    <button type="submit" class="submit-btn"><i class="fas fa-plus"></i> Add Product</button>
+                </form>
+            </div>
+
+            <!-- Product List with Hide/Show Toggle -->
+            <div class="card-white">
+                <h3 style="margin-bottom:12px;">📋 All Products (Manage Stock Status)</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Price (LKR)</th>
+                                <th>Stock Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminProductsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== ALL ORDERS ===== -->
+        <section id="page-all-orders" class="page">
+            <h2 class="page-title">📋 All Orders (All Dropshippers)</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Order #</th><th>Dropshipper</th><th>Customer</th><th>Address</th><th>Phone</th><th>Status</th><th>Created</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="allOrdersTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===== PAYMENTS ===== -->
+        <section id="page-payments" class="page">
+            <h2 class="page-title">💳 Payments Management</h2>
+            <div class="card-white">
+                <h3 style="margin-bottom:12px;">Dropshippers' Bank Details</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Dropshipper</th><th>Bank</th><th>Branch</th><th>Account Holder</th><th>Account #</th></tr></thead>
+                        <tbody id="bankDetailsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-white">
+                <h3 style="margin-bottom:12px;">➕ Add Payment (Send money to a dropshipper)</h3>
+                <button class="submit-btn" onclick="openPaymentModal()" style="width:auto;padding:12px 30px;">
+                    <i class="fas fa-plus-circle"></i> Add Payment Record
+                </button>
+            </div>
+            <div class="card-white">
+                <h3 style="margin-bottom:12px;">📊 All Payment Records</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Dropshipper</th><th>Date</th><th>Account #</th><th>Amount (LKR)</th><th>Proof</th></tr></thead>
+                        <tbody id="allPaymentRecordsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== OTHERS ===== -->
+        <section id="page-others" class="page">
+            <h2 class="page-title">⚙️ Others</h2>
+            <div class="card-white">
+                <h3 style="margin-bottom:12px;">📱 Send Group WhatsApp Message</h3>
+                <form id="groupWhatsAppForm">
+                    <div class="form-group"><label>Message *</label><textarea id="groupMessage" rows="4" required placeholder="Type your message to all dropshippers..."></textarea></div>
+                    <button type="submit" class="submit-btn"><i class="fab fa-whatsapp"></i> Send to All Dropshippers</button>
+                </form>
+                <p style="margin-top:10px;color:#718096;font-size:14px;"><i class="fas fa-info-circle"></i> This will open WhatsApp for each dropshipper (simulated).</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========== MODAL: ADD PAYMENT ========== -->
+    <div class="modal-overlay" id="paymentModal">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closePaymentModal()">&times;</button>
+            <h3 style="margin-bottom:16px;">➕ Add Payment</h3>
+            <form id="addPaymentForm">
+                <div class="form-group"><label>Select Dropshipper *</label><select id="paymentDropshipper" required></select></div>
+                <div class="form-group"><label>Payment Date *</label><input type="date" id="paymentDate" required /></div>
+                <div class="form-group"><label>Amount (LKR) *</label><input type="number" step="0.01" id="paymentAmount" required /></div>
+                <div class="form-group"><label>Account Number (sent to) *</label><input type="text" id="paymentAccount" required /></div>
+                <div class="form-group"><label>Proof (screenshot) *</label><input type="file" id="paymentProof" accept="image/*" required /></div>
+                <button type="submit" class="submit-btn">Submit Payment</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURATION - CHANGE THIS TO YOUR BACKEND URL
+        // ============================================================
+        const API_BASE_URL = 'https://dropship-backend-pswl.onrender.com'; // <-- YOUR BACKEND URL
+        
+        // Cloudinary Configuration
+        const CLOUDINARY_CLOUD_NAME = 'pvyj28x9'; // Your Cloudinary Cloud Name
+        const CLOUDINARY_UPLOAD_PRESET = 'deshipper'; // Your Upload Preset
+
+        // ============================================================
+        // GLOBALS
+        // ============================================================
+        let adminToken = null;
+
+        // ============================================================
+        // LOGIN (First time - redirects to login if no token)
+        // ============================================================
+        function checkLogin() {
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                // Redirect to login page
+                window.location.href = 'admin-login.html';
+                return false;
+            }
+            adminToken = token;
+            return true;
+        }
+
+        // ============================================================
+        // API HELPER FUNCTIONS
+        // ============================================================
+        async function apiCall(method, endpoint, body = null) {
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`
+                }
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'API call failed');
+            }
+            return await response.json();
+        }
+
+        // ============================================================
+        // IMAGE UPLOAD TO CLOUDINARY
+        // ============================================================
+        document.getElementById('prodImageFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const statusDiv = document.getElementById('imageUploadStatus');
+            const preview = document.getElementById('imagePreview');
+            const hiddenUrl = document.getElementById('prodImageUrl');
+
+            if (!file) {
+                preview.style.display = 'none';
+                statusDiv.textContent = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            statusDiv.textContent = '⏳ Uploading to Cloudinary...';
+            statusDiv.style.color = '#4f46e5';
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+            if (!CLOUDINARY_CLOUD_NAME || CLOUDINARY_CLOUD_NAME === 'YOUR_CLOUD_NAME') {
+                statusDiv.textContent = '⚠️ Cloudinary not configured. Using Base64.';
+                statusDiv.style.color = '#e53e3e';
+                hiddenUrl.value = preview.src;
+                return;
+            }
+
+            fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.secure_url) {
+                    hiddenUrl.value = data.secure_url;
+                    statusDiv.textContent = '✅ Uploaded successfully!';
+                    statusDiv.style.color = '#22c55e';
+                } else {
+                    throw new Error(data.error?.message || 'Upload failed');
+                }
+            })
+            .catch(err => {
+                console.error('Cloudinary Error:', err);
+                statusDiv.textContent = '⚠️ Cloudinary failed. Using Base64.';
+                statusDiv.style.color = '#e53e3e';
+                hiddenUrl.value = preview.src;
+            });
+        });
+
+        // ============================================================
+        // ADD USER
+        // ============================================================
+        document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('userUsername').value.trim();
+            const password = document.getElementById('userPassword').value.trim();
+            const phoneNumber = document.getElementById('userPhone').value.trim();
+
+            if (!username || !password || !phoneNumber) {
+                alert('Please fill in all fields.');
+                return;
+            }
+
+            try {
+                await apiCall('POST', '/api/admin/users', { username, password, phoneNumber });
+                alert(`✅ User created! WhatsApp message sent to ${phoneNumber}`);
+                this.reset();
+                renderUsers();
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        });
+
+        // ============================================================
+        // RENDER USERS
+        // ============================================================
+        async function renderUsers() {
+            try {
+                // We need to fetch users - add this endpoint later
+                // For now, just show a message
+                document.getElementById('usersTableBody').innerHTML = `
+                    <tr><td colspan="3" style="text-align:center;color:#718096;">User list coming soon...</td></tr>
+                `;
+            } catch (error) {
+                console.error('Error fetching users:', error);
+            }
+        }
+
+        // ============================================================
+        // ADD PRODUCT
+        // ============================================================
+        document.getElementById('addProductForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const title = document.getElementById('prodTitle').value.trim();
+            const description = document.getElementById('prodDesc').value.trim();
+            const price = parseFloat(document.getElementById('prodPrice').value);
+            const deliveryCharge = parseFloat(document.getElementById('prodDeliveryCharge').value);
+            const deliveryMinDays = parseInt(document.getElementById('prodMin').value);
+            const deliveryMaxDays = parseInt(document.getElementById('prodMax').value);
+            const image = document.getElementById('prodImageUrl').value.trim();
+            const note = document.getElementById('prodNote').value.trim() || 'Handle with care.';
+
+            if (!title || !description || isNaN(price) || isNaN(deliveryCharge) || isNaN(deliveryMinDays) || isNaN(deliveryMaxDays)) {
+                alert('Please fill in all required fields correctly.');
+                return;
+            }
+
+            if (!image) {
+                alert('Please upload an image first (wait for upload to finish).');
+                return;
+            }
+
+            try {
+                await apiCall('POST', '/api/admin/products', {
+                    title,
+                    description,
+                    price,
+                    deliveryCharge,
+                    deliveryMinDays,
+                    deliveryMaxDays,
+                    image,
+                    note
+                });
+                alert('✅ Product added successfully!');
+                this.reset();
+                document.getElementById('imagePreview').style.display = 'none';
+                document.getElementById('imageUploadStatus').textContent = '';
+                document.getElementById('prodImageUrl').value = '';
+                renderAdminProducts();
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        });
+
+        // ============================================================
+        // RENDER ADMIN PRODUCTS (with Hide/Show toggle)
+        // ============================================================
+        async function renderAdminProducts() {
+            const tbody = document.getElementById('adminProductsTableBody');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+
+            try {
+                const products = await apiCall('GET', '/api/admin/products');
+                tbody.innerHTML = '';
+                if (products.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#718096;">No products yet.</td></tr>';
+                    return;
+                }
+                products.forEach(p => {
+                    const status = p.isHidden ? '❌ Hidden' : '✅ Available';
+                    const statusClass = p.isHidden ? 'stock-hidden' : 'stock-available';
+                    const buttonText = p.isHidden ? 'Show' : 'Hide';
+                    const buttonClass = p.isHidden ? 'btn-edit' : 'btn-toggle';
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${p.title}</td>
+                        <td>Rs. ${p.price.toFixed(2)}</td>
+                        <td><span class="${statusClass}">${status}</span></td>
+                        <td>
+                            <button class="${buttonClass}" onclick="toggleProduct(${p.id})">
+                                <i class="fas ${p.isHidden ? 'fa-eye' : 'fa-eye-slash'}"></i> ${buttonText}
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#e53e3e;">Error: ${error.message}</td></tr>`;
+            }
+        }
+
+        // ============================================================
+        // TOGGLE PRODUCT (Hide/Show)
+        // ============================================================
+        async function toggleProduct(productId) {
+            if (!confirm('Toggle stock status for this product?')) return;
+            try {
+                const result = await apiCall('PUT', `/api/admin/products/${productId}/toggle-hide`);
+                alert(`✅ Product ${result.product.isHidden ? 'Hidden' : 'Available'}!`);
+                renderAdminProducts();
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // ============================================================
+        // RENDER ALL ORDERS
+        // ============================================================
+        async function renderAllOrders() {
+            const tbody = document.getElementById('allOrdersTableBody');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Loading...</td></tr>';
+
+            try {
+                const orders = await apiCall('GET', '/api/admin/orders');
+                tbody.innerHTML = '';
+                if (orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#718096;">No orders yet.</td></tr>';
+                    return;
+                }
+                orders.forEach(o => {
+                    const statusClass = 'status-' + o.status.toLowerCase();
+                    const statusDisplay = o.status.charAt(0).toUpperCase() + o.status.slice(1).toLowerCase();
+                    const created = new Date(o.createdAt);
+                    const username = o.dropshipper?.username || 'Unknown';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>#${o.orderNumber}</strong></td>
+                        <td>${username}</td>
+                        <td>${o.customerName}</td>
+                        <td style="max-width:140px;word-break:break-word;">${o.address}</td>
+                        <td>${o.phone1}</td>
+                        <td>
+                            <select onchange="changeOrderStatus(${o.id}, this.value)" class="status-badge" style="border:none;background:transparent;font-weight:600;cursor:pointer;">
+                                <option value="PROCESSING" ${o.status==='PROCESSING'?'selected':''}>Processing</option>
+                                <option value="DELIVERED" ${o.status==='DELIVERED'?'selected':''}>Delivered</option>
+                                <option value="COMPLETED" ${o.status==='COMPLETED'?'selected':''}>Completed</option>
+                                <option value="CANCELLED" ${o.status==='CANCELLED'?'selected':''}>Cancelled</option>
+                                <option value="REJECTED" ${o.status==='REJECTED'?'selected':''}>Rejected</option>
+                            </select>
+                        </td>
+                        <td>${created.toLocaleDateString()}</td>
+                        <td class="table-actions">
+                            <button class="btn-whatsapp" onclick="whatsappDropshipper(${o.dropshipperId}, ${o.orderNumber})">
+                                <i class="fab fa-whatsapp"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#e53e3e;">Error: ${error.message}</td></tr>`;
+            }
+        }
+
+        // ============================================================
+        // CHANGE ORDER STATUS
+        // ============================================================
+        async function changeOrderStatus(orderId, newStatus) {
+            try {
+                await apiCall('PUT', `/api/admin/orders/${orderId}/status`, { status: newStatus });
+                alert(`✅ Order status updated to ${newStatus}!`);
+                renderAllOrders();
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // ============================================================
+        // WHATSAPP DROPSHIPPER
+        // ============================================================
+        function whatsappDropshipper(dropshipperId, orderNumber) {
+            // For now, we'll just show a message - we need to fetch user phone
+            alert(`📱 WhatsApp to dropshipper about order #${orderNumber}\n(Phone number lookup coming soon)`);
+        }
+
+        // ============================================================
+        // PAYMENTS (Placeholder for now)
+        // ============================================================
+        function renderBankDetails() {
+            document.getElementById('bankDetailsTableBody').innerHTML = `
+                <tr><td colspan="5" style="text-align:center;color:#718096;">Bank details coming soon...</td></tr>
+            `;
+        }
+
+        function renderAllPaymentRecords() {
+            document.getElementById('allPaymentRecordsBody').innerHTML = `
+                <tr><td colspan="5" style="text-align:center;color:#718096;">Payment records coming soon...</td></tr>
+            `;
+        }
+
+        function openPaymentModal() {
+            alert('Payment functionality coming soon!');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.remove('show');
+        }
+
+        // ============================================================
+        // GROUP WHATSAPP
+        // ============================================================
+        document.getElementById('groupWhatsAppForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = document.getElementById('groupMessage').value.trim();
+            if (!message) { alert('Please type a message.'); return; }
+            alert(`📱 Sending group WhatsApp message:\n"${message}"\n\n(Simulated - User list coming soon)`);
+            this.reset();
+        });
+
+        // ============================================================
+        // NAVIGATION
+        // ============================================================
+        const menuItems = document.querySelectorAll('.menu-item[data-page]');
+        const pages = {
+            'add-user': document.getElementById('page-add-user'),
+            'add-product': document.getElementById('page-add-product'),
+            'all-orders': document.getElementById('page-all-orders'),
+            'payments': document.getElementById('page-payments'),
+            'others': document.getElementById('page-others')
+        };
+        menuItems.forEach(item => {
+            item.addEventListener('click', function() {
+                menuItems.forEach(m => m.classList.remove('active'));
+                this.classList.add('active');
+                Object.values(pages).forEach(p => p.classList.remove('active-page'));
+                const pageId = this.getAttribute('data-page');
+                if (pages[pageId]) pages[pageId].classList.add('active-page');
+            });
+        });
+
+        // ============================================================
+        // LOGOUT
+        // ============================================================
+        function logout() {
+            if (confirm('Logout?')) {
+                localStorage.removeItem('adminToken');
+                window.location.href = 'admin-login.html';
+            }
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        async function init() {
+            if (!checkLogin()) return;
+            renderUsers();
+            renderAdminProducts();
+            renderAllOrders();
+            renderBankDetails();
+            renderAllPaymentRecords();
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
