@@ -69,7 +69,7 @@
                 // Save token and redirect
                 localStorage.setItem('adminToken', data.token);
                 localStorage.setItem('adminUser', JSON.stringify(data.user));
-                window.location.href = 'admin-live.html';
+                window.location.href = 'admin.html';
 
             } catch (error) {
                 errorMsg.textContent = '❌ ' + error.message;
