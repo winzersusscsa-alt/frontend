@@ -73,7 +73,7 @@
                 // Save token and redirect
                 localStorage.setItem('dropshipperToken', data.token);
                 localStorage.setItem('dropshipperUser', JSON.stringify(data.user));
-                window.location.href = 'dashboard-live.html';
+                window.location.href = 'dashboard.html';
 
             } catch (error) {
                 errorMsg.textContent = '❌ ' + error.message;
