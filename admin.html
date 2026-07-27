@@ -89,15 +89,23 @@
                 </form>
                 <p style="margin-top:12px;color:#718096;font-size:14px;"><i class="fas fa-info-circle"></i> Credentials will be sent via WhatsApp (simulated).</p>
             </div>
-            <div class="card-white">
-                <h3 style="margin-bottom:12px;">All Dropshippers</h3>
-                <div class="table-wrap">
-                    <table>
-                        <thead><tr><th>ID</th><th>Username</th><th>Phone</th></tr></thead>
-                        <tbody id="usersTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
+<div class="card-white">
+    <h3 style="margin-bottom:12px;">All Dropshippers</h3>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Phone</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+        </table>
+    </div>
+</div>
         </section>
 
         <!-- ===== ADD PRODUCT ===== -->
@@ -357,20 +365,91 @@
             }
         });
 
-        // ============================================================
-        // RENDER USERS
-        // ============================================================
-        async function renderUsers() {
-            try {
-                // We need to fetch users - add this endpoint later
-                // For now, just show a message
-                document.getElementById('usersTableBody').innerHTML = `
-                    <tr><td colspan="3" style="text-align:center;color:#718096;">User list coming soon...</td></tr>
-                `;
-            } catch (error) {
-                console.error('Error fetching users:', error);
-            }
+// ============================================================
+// RENDER USERS
+// ============================================================
+async function renderUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading...</td></tr>';
+
+    try {
+        const users = await apiCall('GET', '/api/admin/users');
+        tbody.innerHTML = '';
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#718096;">No dropshippers yet. Create one above!</td></tr>';
+            return;
         }
+        users.forEach(u => {
+            const created = new Date(u.createdAt);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${u.id}</td>
+                <td><strong>${u.username}</strong></td>
+                <td>${u.phoneNumber || '-'}</td>
+                <td>${created.toLocaleDateString()}</td>
+                <td class="table-actions">
+                    <button class="btn-edit" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
+                    <button class="btn-delete" onclick="deleteUser(${u.id})"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#e53e3e;">Error: ${error.message}</td></tr>`;
+    }
+}
+
+
+       // ============================================================
+// EDIT USER
+// ============================================================
+async function editUser(userId) {
+    try {
+        // Fetch current user data
+        const user = await apiCall('GET', `/api/admin/users/${userId}`);
+        
+        // Prompt for new details
+        const newUsername = prompt('Username:', user.username);
+        if (newUsername === null) return;
+        
+        const newPhone = prompt('Phone Number:', user.phoneNumber || '');
+        if (newPhone === null) return;
+        
+        const newPassword = prompt('New Password (leave blank to keep current):', '');
+        if (newPassword === null) return;
+        
+        const updateData = {
+            username: newUsername.trim(),
+            phoneNumber: newPhone.trim()
+        };
+        
+        if (newPassword.trim() !== '') {
+            updateData.password = newPassword.trim();
+        }
+        
+        await apiCall('PUT', `/api/admin/users/${userId}`, updateData);
+        alert('✅ User updated successfully!');
+        renderUsers();
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+}
+
+// ============================================================
+// DELETE USER
+// ============================================================
+async function deleteUser(userId) {
+    if (!confirm('Delete this user? This cannot be undone!')) return;
+    try {
+        await apiCall('DELETE', `/api/admin/users/${userId}`);
+        alert('🗑️ User deleted successfully!');
+        renderUsers();
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+} 
+
+        
 
         // ============================================================
         // ADD PRODUCT
