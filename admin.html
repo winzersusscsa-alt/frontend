@@ -919,6 +919,33 @@ document.getElementById('addPaymentForm').addEventListener('submit', async funct
         alert('❌ Error: ' + error.message);
     }
 });
+      
+
+        // ============================================================
+        // LOGOUT
+        // ============================================================
+        function logout() {
+            if (confirm('Logout?')) {
+                localStorage.removeItem('adminToken');
+                window.location.href = 'admin-login.html';
+            }
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        async function init() {
+            if (!checkLogin()) return;
+            renderUsers();
+            renderAdminProducts();
+            renderAllOrders();
+            renderBankDetails();
+            renderAllPaymentRecords();
+        }
+
+        // Start the app
+        init();
+    </script>
 
        <!-- ========== MODAL: EDIT ORDER ========== -->
 <div class="modal-overlay" id="editOrderModal">
@@ -963,34 +990,5 @@ document.getElementById('addPaymentForm').addEventListener('submit', async funct
         </form>
     </div>
 </div>
-
-
-        
-
-        // ============================================================
-        // LOGOUT
-        // ============================================================
-        function logout() {
-            if (confirm('Logout?')) {
-                localStorage.removeItem('adminToken');
-                window.location.href = 'admin-login.html';
-            }
-        }
-
-        // ============================================================
-        // INIT
-        // ============================================================
-        async function init() {
-            if (!checkLogin()) return;
-            renderUsers();
-            renderAdminProducts();
-            renderAllOrders();
-            renderBankDetails();
-            renderAllPaymentRecords();
-        }
-
-        // Start the app
-        init();
-    </script>
 </body>
 </html>
