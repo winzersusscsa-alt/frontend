@@ -431,14 +431,34 @@
             }
         });
 
-        // ============================================================
-        // PAYMENTS (Placeholder - Backend not fully built yet)
-        // ============================================================
-        function renderPayments() {
-            document.getElementById('paymentHistoryBody').innerHTML = `
-                <tr><td colspan="3" style="text-align:center;color:#718096;">Payment history will appear here once the admin adds payments.</td></tr>
-            `;
+// ============================================================
+// RENDER PAYMENT HISTORY
+// ============================================================
+async function renderPayments() {
+    const tbody = document.getElementById('paymentHistoryBody');
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Loading...</td></tr>';
+
+    try {
+        const payments = await apiCall('GET', '/api/payments');
+        tbody.innerHTML = '';
+        if (payments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#718096;">No payments received yet.</td></tr>';
+            return;
         }
+        payments.forEach(p => {
+            const date = new Date(p.paymentDate);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${date.toLocaleDateString()}</td>
+                <td>${p.accountNumber}</td>
+                <td><strong>Rs. ${p.amount.toFixed(2)}</strong></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#e53e3e;">Error: ${error.message}</td></tr>`;
+    }
+}
 
         // ============================================================
 // SAVE BANK DETAILS
@@ -469,6 +489,23 @@ document.getElementById('bankForm').addEventListener('submit', async function(e)
         alert('❌ Error: ' + error.message);
     }
 });
+
+        // ============================================================
+// LOAD BANK DETAILS (Auto-fill form if saved)
+// ============================================================
+async function loadBankDetails() {
+    try {
+        const bankDetails = await apiCall('GET', '/api/bank-details');
+        if (bankDetails) {
+            document.getElementById('bankName').value = bankDetails.bankName || '';
+            document.getElementById('bankBranch').value = bankDetails.branch || '';
+            document.getElementById('accountHolder').value = bankDetails.accountHolder || '';
+            document.getElementById('accountNumber').value = bankDetails.accountNumber || '';
+        }
+    } catch (error) {
+        console.error('Error loading bank details:', error);
+    }
+}
 
         // ============================================================
         // NAVIGATION
@@ -504,20 +541,22 @@ document.getElementById('bankForm').addEventListener('submit', async function(e)
         // ============================================================
         // INIT
         // ============================================================
-        async function init() {
-            if (!checkLogin()) return;
-            await renderProducts();
-            await renderOrders();
-            renderPayments();
-            // Set auto order number
-            try {
-                const orders = await apiCall('GET', '/api/orders');
-                const maxOrder = orders.reduce((max, o) => Math.max(max, o.orderNumber), 20000);
-                document.getElementById('autoOrderNumber').textContent = maxOrder + 1;
-            } catch (e) {
-                console.error('Error getting order number:', e);
-            }
-        }
+async function init() {
+    if (!checkLogin()) return;
+    await renderProducts();
+    await renderOrders();
+    await renderPayments();  // ✅ Already there
+    await loadBankDetails(); // ⭐ ADD THIS LINE
+    
+    // Set auto order number
+    try {
+        const orders = await apiCall('GET', '/api/orders');
+        const maxOrder = orders.reduce((max, o) => Math.max(max, o.orderNumber), 20000);
+        document.getElementById('autoOrderNumber').textContent = maxOrder + 1;
+    } catch (e) {
+        console.error('Error getting order number:', e);
+    }
+}
 
         init();
     </script>
