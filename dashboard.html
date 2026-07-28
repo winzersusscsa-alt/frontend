@@ -440,10 +440,35 @@
             `;
         }
 
-        document.getElementById('bankForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('✅ Bank details saved! (Coming soon: real backend integration)');
+        // ============================================================
+// SAVE BANK DETAILS
+// ============================================================
+document.getElementById('bankForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const bankName = document.getElementById('bankName').value.trim();
+    const branch = document.getElementById('bankBranch').value.trim();
+    const accountHolder = document.getElementById('accountHolder').value.trim();
+    const accountNumber = document.getElementById('accountNumber').value.trim();
+
+    if (!bankName || !branch || !accountHolder || !accountNumber) {
+        alert('Please fill in all bank details.');
+        return;
+    }
+
+    try {
+        await apiCall('POST', '/api/bank-details', {
+            bankName,
+            branch,
+            accountHolder,
+            accountNumber
         });
+        alert('✅ Bank details saved successfully!');
+        // Re-fetch and display updated bank details
+        loadBankDetails();
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+});
 
         // ============================================================
         // NAVIGATION
