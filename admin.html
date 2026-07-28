@@ -620,24 +620,94 @@ async function deleteUser(userId) {
             alert(`📱 WhatsApp to dropshipper about order #${orderNumber}\n(Phone number lookup coming soon)`);
         }
 
-        // ============================================================
-        // PAYMENTS (Placeholder for now)
-        // ============================================================
-        function renderBankDetails() {
-            document.getElementById('bankDetailsTableBody').innerHTML = `
-                <tr><td colspan="5" style="text-align:center;color:#718096;">Bank details coming soon...</td></tr>
-            `;
-        }
+// ============================================================
+// RENDER BANK DETAILS (Admin view)
+// ============================================================
+async function renderBankDetails() {
+    const tbody = document.getElementById('bankDetailsTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading...</td></tr>';
 
-        function renderAllPaymentRecords() {
-            document.getElementById('allPaymentRecordsBody').innerHTML = `
-                <tr><td colspan="5" style="text-align:center;color:#718096;">Payment records coming soon...</td></tr>
+    try {
+        const bankDetails = await apiCall('GET', '/api/admin/bank-details');
+        tbody.innerHTML = '';
+        if (bankDetails.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#718096;">No bank details saved yet.</td></tr>';
+            return;
+        }
+        bankDetails.forEach(b => {
+            const username = b.dropshipper?.username || 'Unknown';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${username}</td>
+                <td>${b.bankName}</td>
+                <td>${b.branch}</td>
+                <td>${b.accountHolder}</td>
+                <td>${b.accountNumber}</td>
             `;
-        }
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#e53e3e;">Error: ${error.message}</td></tr>`;
+    }
+}
 
-        function openPaymentModal() {
-            alert('Payment functionality coming soon!');
+// ============================================================
+// RENDER ALL PAYMENT RECORDS (Admin view)
+// ============================================================
+async function renderAllPaymentRecords() {
+    const tbody = document.getElementById('allPaymentRecordsBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading...</td></tr>';
+
+    try {
+        const payments = await apiCall('GET', '/api/admin/payments');
+        tbody.innerHTML = '';
+        if (payments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#718096;">No payments sent yet.</td></tr>';
+            return;
         }
+        payments.forEach(p => {
+            const username = p.dropshipper?.username || 'Unknown';
+            const date = new Date(p.paymentDate);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${username}</td>
+                <td>${date.toLocaleDateString()}</td>
+                <td>${p.accountNumber}</td>
+                <td><strong>Rs. ${p.amount.toFixed(2)}</strong></td>
+                <td>${p.proofUrl ? '📎 Uploaded' : '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#e53e3e;">Error: ${error.message}</td></tr>`;
+    }
+}
+
+// ============================================================
+// OPEN PAYMENT MODAL
+// ============================================================
+async function openPaymentModal() {
+    const select = document.getElementById('paymentDropshipper');
+    select.innerHTML = '';
+    
+    try {
+        const users = await apiCall('GET', '/api/admin/users');
+        if (users.length === 0) {
+            alert('No dropshippers found. Create a user first!');
+            return;
+        }
+        users.forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = u.username + ' (' + (u.phoneNumber || 'no phone') + ')';
+            select.appendChild(opt);
+        });
+        document.getElementById('paymentModal').classList.add('show');
+        document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+    } catch (error) {
+        alert('❌ Error loading dropshippers: ' + error.message);
+    }
+}
 
         function closePaymentModal() {
             document.getElementById('paymentModal').classList.remove('show');
@@ -674,6 +744,43 @@ async function deleteUser(userId) {
                 if (pages[pageId]) pages[pageId].classList.add('active-page');
             });
         });
+
+
+// ============================================================
+// ADD PAYMENT (Admin)
+// ============================================================
+document.getElementById('addPaymentForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const dropshipperId = parseInt(document.getElementById('paymentDropshipper').value);
+    const paymentDate = document.getElementById('paymentDate').value;
+    const amount = parseFloat(document.getElementById('paymentAmount').value);
+    const accountNumber = document.getElementById('paymentAccount').value.trim();
+    const proofFile = document.getElementById('paymentProof').files[0];
+
+    if (!dropshipperId || !paymentDate || isNaN(amount) || !accountNumber || !proofFile) {
+        alert('Please fill in all fields and select a proof image.');
+        return;
+    }
+
+    const proofUrl = '📎 ' + proofFile.name;
+
+    try {
+        await apiCall('POST', '/api/admin/payments', {
+            dropshipperId,
+            paymentDate,
+            amount,
+            accountNumber,
+            proofUrl
+        });
+        alert('✅ Payment record added! Dropshipper will see it in their history.');
+        closePaymentModal();
+        this.reset();
+        renderAllPaymentRecords();
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+});
+        
 
         // ============================================================
         // LOGOUT
