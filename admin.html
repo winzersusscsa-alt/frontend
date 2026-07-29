@@ -141,22 +141,23 @@
             </div>
 
             <!-- Product List with Hide/Show Toggle -->
-            <div class="card-white">
-                <h3 style="margin-bottom:12px;">📋 All Products (Manage Stock Status)</h3>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Price (LKR)</th>
-                                <th>Stock Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminProductsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
+<!-- Product List with Edit/Delete -->
+<div class="card-white">
+    <h3 style="margin-bottom:12px;">📋 All Products (Manage Stock Status)</h3>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Price (LKR)</th>
+                    <th>Stock Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="adminProductsTableBody"></tbody>
+        </table>
+    </div>
+</div>
         </section>
 
 <!-- ===== ALL ORDERS ===== -->
@@ -297,6 +298,61 @@
             </form>
         </div>
     </div>
+
+    <!-- ========== MODAL: EDIT PRODUCT ========== -->
+<div class="modal-overlay" id="editProductModal">
+    <div class="modal-box" style="max-width:600px;">
+        <button class="modal-close" onclick="closeEditProductModal()">&times;</button>
+        <h3 style="margin-bottom:16px;">✏️ Edit Product</h3>
+        <form id="editProductForm">
+            <input type="hidden" id="editProductId" />
+            <div class="form-group">
+                <label>Title *</label>
+                <input type="text" id="editProdTitle" required />
+            </div>
+            <div class="form-group">
+                <label>Description *</label>
+                <textarea id="editProdDesc" rows="3" required></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Price (LKR) *</label>
+                    <input type="number" step="0.01" id="editProdPrice" required />
+                </div>
+                <div class="form-group">
+                    <label>Delivery Charge (LKR) *</label>
+                    <input type="number" step="0.01" id="editProdDeliveryCharge" required />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Deliver in (min days) *</label>
+                    <input type="number" id="editProdMin" required />
+                </div>
+                <div class="form-group">
+                    <label>Deliver in (max days) *</label>
+                    <input type="number" id="editProdMax" required />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Image URL</label>
+                <input type="text" id="editProdImage" placeholder="Cloudinary URL" />
+            </div>
+            <div class="form-group">
+                <label>Special Note</label>
+                <input type="text" id="editProdNote" />
+            </div>
+            <div class="form-group">
+                <label>Stock Status</label>
+                <select id="editProdStatus">
+                    <option value="false">✅ Available</option>
+                    <option value="true">❌ Hidden</option>
+                </select>
+            </div>
+            <button type="submit" class="submit-btn">Update Product</button>
+        </form>
+    </div>
+</div>
 
     <script>
         // ============================================================
@@ -557,43 +613,138 @@
             }
         });
 
-        // ============================================================
-        // RENDER ADMIN PRODUCTS
-        // ============================================================
-        async function renderAdminProducts() {
-            const tbody = document.getElementById('adminProductsTableBody');
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+       // ============================================================
+// RENDER ADMIN PRODUCTS (with Edit & Delete buttons)
+// ============================================================
+async function renderAdminProducts() {
+    const tbody = document.getElementById('adminProductsTableBody');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
 
-            try {
-                const products = await apiCall('GET', '/api/admin/products');
-                tbody.innerHTML = '';
-                if (products.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#718096;">No products yet.</td></tr>';
-                    return;
-                }
-                products.forEach(p => {
-                    const status = p.isHidden ? '❌ Hidden' : '✅ Available';
-                    const statusClass = p.isHidden ? 'stock-hidden' : 'stock-available';
-                    const buttonText = p.isHidden ? 'Show' : 'Hide';
-                    const buttonClass = p.isHidden ? 'btn-edit' : 'btn-toggle';
-                    
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${p.title}</td>
-                        <td>Rs. ${p.price.toFixed(2)}</td>
-                        <td><span class="${statusClass}">${status}</span></td>
-                        <td>
-                            <button class="${buttonClass}" onclick="toggleProduct(${p.id})">
-                                <i class="fas ${p.isHidden ? 'fa-eye' : 'fa-eye-slash'}"></i> ${buttonText}
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#e53e3e;">Error: ${error.message}</td></tr>`;
-            }
+    try {
+        const products = await apiCall('GET', '/api/admin/products');
+        tbody.innerHTML = '';
+        if (products.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#718096;">No products yet.</td></tr>';
+            return;
         }
+        products.forEach(p => {
+            const status = p.isHidden ? '❌ Hidden' : '✅ Available';
+            const statusClass = p.isHidden ? 'stock-hidden' : 'stock-available';
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${p.title}</td>
+                <td>Rs. ${p.price.toFixed(2)}</td>
+                <td><span class="${statusClass}">${status}</span></td>
+                <td class="table-actions">
+                    <button class="btn-edit" onclick="openEditProductModal(${p.id})"><i class="fas fa-pen"></i></button>
+                    <button class="btn-delete" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+                    <button class="btn-toggle" onclick="toggleProduct(${p.id})">
+                        <i class="fas ${p.isHidden ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#e53e3e;">Error: ${error.message}</td></tr>`;
+    }
+}
+
+// ============================================================
+// EDIT PRODUCT MODAL
+// ============================================================
+async function openEditProductModal(productId) {
+    try {
+        const products = await apiCall('GET', '/api/admin/products');
+        const product = products.find(p => p.id === productId);
+        if (!product) {
+            alert('Product not found');
+            return;
+        }
+
+        // Fill the form
+        document.getElementById('editProductId').value = product.id;
+        document.getElementById('editProdTitle').value = product.title;
+        document.getElementById('editProdDesc').value = product.description;
+        document.getElementById('editProdPrice').value = product.price;
+        document.getElementById('editProdDeliveryCharge').value = product.deliveryCharge;
+        document.getElementById('editProdMin').value = product.deliveryMinDays;
+        document.getElementById('editProdMax').value = product.deliveryMaxDays;
+        document.getElementById('editProdImage').value = product.image || '';
+        document.getElementById('editProdNote').value = product.note || '';
+        document.getElementById('editProdStatus').value = product.isHidden ? 'true' : 'false';
+
+        document.getElementById('editProductModal').classList.add('show');
+    } catch (error) {
+        alert('❌ Error loading product: ' + error.message);
+    }
+}
+
+function closeEditProductModal() {
+    document.getElementById('editProductModal').classList.remove('show');
+}
+
+// Click outside to close
+document.getElementById('editProductModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditProductModal();
+});
+
+// ============================================================
+// SUBMIT EDIT PRODUCT
+// ============================================================
+document.getElementById('editProductForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const productId = parseInt(document.getElementById('editProductId').value);
+    const title = document.getElementById('editProdTitle').value.trim();
+    const description = document.getElementById('editProdDesc').value.trim();
+    const price = parseFloat(document.getElementById('editProdPrice').value);
+    const deliveryCharge = parseFloat(document.getElementById('editProdDeliveryCharge').value);
+    const deliveryMinDays = parseInt(document.getElementById('editProdMin').value);
+    const deliveryMaxDays = parseInt(document.getElementById('editProdMax').value);
+    const image = document.getElementById('editProdImage').value.trim();
+    const note = document.getElementById('editProdNote').value.trim();
+    const isHidden = document.getElementById('editProdStatus').value === 'true';
+
+    if (!title || !description || isNaN(price) || isNaN(deliveryCharge) || isNaN(deliveryMinDays) || isNaN(deliveryMaxDays)) {
+        alert('Please fill in all required fields correctly.');
+        return;
+    }
+
+    try {
+        await apiCall('PUT', `/api/admin/products/${productId}`, {
+            title,
+            description,
+            price,
+            deliveryCharge,
+            deliveryMinDays,
+            deliveryMaxDays,
+            image,
+            note,
+            isHidden
+        });
+        alert('✅ Product updated successfully!');
+        closeEditProductModal();
+        renderAdminProducts(); // Refresh the table
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+});
+
+// ============================================================
+// DELETE PRODUCT
+// ============================================================
+async function deleteProduct(productId) {
+    if (!confirm('Delete this product? This cannot be undone!')) return;
+    try {
+        await apiCall('DELETE', `/api/admin/products/${productId}`);
+        alert('🗑️ Product deleted successfully!');
+        renderAdminProducts();
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+}
+        
 
         // ============================================================
         // TOGGLE PRODUCT
