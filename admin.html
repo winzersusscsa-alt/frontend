@@ -711,33 +711,41 @@
             if (e.target === this) closeEditOrderModal();
         });
 
-        // ============================================================
-        // SUBMIT EDIT ORDER
-        // ============================================================
-        document.getElementById('editOrderForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const orderId = parseInt(document.getElementById('editOrderId').value);
-            const customerName = document.getElementById('editCustomerName').value.trim();
-            const address = document.getElementById('editAddress').value.trim();
-            const postalCode = document.getElementById('editPostalCode').value.trim();
-            const phone1 = document.getElementById('editPhone1').value.trim();
-            const phone2 = document.getElementById('editPhone2').value.trim();
-            const status = document.getElementById('editStatus').value;
+// ============================================================
+// SUBMIT EDIT ORDER (Updated - now updates ALL fields)
+// ============================================================
+document.getElementById('editOrderForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const orderId = parseInt(document.getElementById('editOrderId').value);
+    const customerName = document.getElementById('editCustomerName').value.trim();
+    const address = document.getElementById('editAddress').value.trim();
+    const postalCode = document.getElementById('editPostalCode').value.trim();
+    const phone1 = document.getElementById('editPhone1').value.trim();
+    const phone2 = document.getElementById('editPhone2').value.trim();
+    const status = document.getElementById('editStatus').value;
 
-            if (!customerName || !address || !postalCode || !phone1) {
-                alert('Please fill in all required fields.');
-                return;
-            }
+    if (!customerName || !address || !postalCode || !phone1) {
+        alert('Please fill in all required fields.');
+        return;
+    }
 
-            try {
-                await apiCall('PUT', `/api/admin/orders/${orderId}/status`, { status });
-                alert('✅ Order updated successfully!');
-                closeEditOrderModal();
-                renderAllOrders();
-            } catch (error) {
-                alert('❌ Error: ' + error.message);
-            }
+    try {
+        // ✅ Now calling the FULL update endpoint
+        await apiCall('PUT', `/api/admin/orders/${orderId}`, {
+            customerName,
+            address,
+            postalCode,
+            phone1,
+            phone2,
+            status
         });
+        alert('✅ Order updated successfully!');
+        closeEditOrderModal();
+        renderAllOrders(); // Refresh the table
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+});
 
         // ============================================================
         // BULK DELETE ORDERS
